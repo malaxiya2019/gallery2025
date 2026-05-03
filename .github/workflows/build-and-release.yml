@@ -1,0 +1,55 @@
+name: Build & Release 汉化版 APK
+
+on:
+  push:
+    tags:
+      - 'v*'           # 推送 v1.0.0 这类标签时触发
+  workflow_dispatch:    # 也允许手动在 Actions 页面点按钮触发
+
+permissions:
+  contents: write       # 允许创建 Release
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: 设置 Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: 授予 Gradle 执行权限
+        run: chmod +x gradlew
+
+      - name: 编译 Release APK
+        run: ./gradlew assembleRelease
+
+      - name: 找到 APK 文件
+        run: |
+          echo "APK_FILE=$(find app/build/outputs/apk -name '*.apk' | head -n 1)" >> $GITHUB_ENV
+
+      - name: 创建 Release 并上传 APK
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "汉化版 ${{ github.ref_name }}"
+          body: |
+            ## 📱 汉化版 Mobile Server
+            
+            - **版本**: ${{ github.ref_name }}
+            - **基于**: techjarves/mobile-server 汉化修改
+            - **变更**: 完整简体中文界面
+            
+            ### 国内用户下载
+            如 GitHub 下载慢，请访问网盘备用链接（你可以在发布后手动添加到 Release 说明里）
+            
+            ---
+            *自动构建于 GitHub Actions*
+          files: ${{ env.APK_FILE }}
+          generate_release_notes: false
